@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      margin: auto;
+    }
+
+    label {
+      font-size: 16px;
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      background: #28a745;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      background: #218838;
+    }
+
+    .update-button {
+      background-color: #ffc107;
+      color: black;
+    }
+
+    .delete-button {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #ddd;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Add / Update Product</h2>
+
+  <div class="container">
+    <form id="productForm">
+      <label for="productCode">Product Code:</label>
+      <input type="text" id="productCode" required>
+
+      <label for="productName">Product Name:</label>
+      <input type="text" id="productName" required>
+
+      <label for="category">Category:</label>
+      <input type="text" id="category" required>
+
+      <label for="price">Price:</label>
+      <input type="number" id="price" required>
+
+      <label for="stock">Stock:</label>
+      <input type="number" id="stock" required>
+
+      <label for="description">Description:</label>
+      <input type="text" id="description" required>
+
+      <button type="button" onclick="addOrUpdateProduct()">Submit Product</button>
+    </form>
+  </div>
+
+  <h2>Product List</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Product Code</th>
+        <th>Product Name</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Description</th>
+        <th>Created At</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="productTableBody"></tbody>
+  </table>
+
+  <script>
+    const apiUrl = 'https://aohkgmavb0.execute-api.us-east-1.amazonaws.com/dev/getData';
+
+    document.addEventListener('DOMContentLoaded', fetchProducts);
+
+    function addOrUpdateProduct() {
+      const productCode = document.getElementById('productCode').value;
+      const productName = document.getElementById('productName').value;
+      const category = document.getElementById('category').value;
+      const price = document.getElementById('price').value;
+      const stock = document.getElementById('stock').value;
+      const description = document.getElementById('description').value;
+
+      const data = {
+        operation: 'addProduct', // will be used for both insert and update
+        productCode,
+        productName,
+        category,
+        price,
+        stock,
+        description
+      };
+
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+        .then(response => response.json())
+        .then(result => {
+          alert(JSON.parse(result.body));
+          document.getElementById('productForm').reset();
+          fetchProducts();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function fetchProducts() {
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ operation: 'listProduct' }),
+      })
+        .then(response => response.json())
+        .then(responseData => {
+          const products = JSON.parse(responseData.body);
+          const tbody = document.getElementById('productTableBody');
+          tbody.innerHTML = '';
+          products.forEach(updateProductTable);
+        })
+        .catch(error => {
+          console.error('Error fetching products:', error);
+        });
+    }
+
+    function updateProductTable(product) {
+      const tableBody = document.getElementById('productTableBody');
+      const row = tableBody.insertRow();
+
+      row.insertCell(0).textContent = product.productCode;
+      row.insertCell(1).textContent = product.productName;
+      row.insertCell(2).textContent = product.category;
+      row.insertCell(3).textContent = product.price;
+      row.insertCell(4).textContent = product.stock;
+      row.insertCell(5).textContent = product.description;
+      row.insertCell(6).textContent = product.createdAt;
+
+      const actionsCell = row.insertCell(7);
+      actionsCell.classList.add('actions');
+
+      const updateBtn = document.createElement('button');
+      updateBtn.textContent = 'Edit';
+      updateBtn.className = 'update-button';
+      updateBtn.onclick = () => fillForm(product);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.className = 'delete-button';
+      deleteBtn.onclick = () => deleteProduct(product.productCode);
+
+      actionsCell.appendChild(updateBtn);
+      actionsCell.appendChild(deleteBtn);
+    }
+
+    function fillForm(product) {
+      document.getElementById('productCode').value = product.productCode;
+      document.getElementById('productName').value = product.productName;
+      document.getElementById('category').value = product.category;
+      document.getElementById('price').value = product.price;
+      document.getElementById('stock').value = product.stock;
+      document.getElementById('description').value = product.description;
+    }
+
+    function deleteProduct(code) {
+      if (!confirm(`Are you sure you want to delete Product Code: ${code}?`)) return;
+
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation: 'deleteProduct',
+          productCode: code
+        }),
+      })
+        .then(response => response.json())
+        .then(result => {
+          alert(JSON.parse(result.body));
+          fetchProducts();
+        })
+        .catch(error => {
+          console.error('Error deleting product:', error);
+        });
+    }
+  </script>
+
+</body>
+</html>
